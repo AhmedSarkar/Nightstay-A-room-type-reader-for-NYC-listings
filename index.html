@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nightstay — what kind of room is this, really?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="citymap"></canvas>
+
+<div class="page">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">N</span>
+      <span class="brand-name">Nightstay</span>
+    </div>
+    <p class="brand-tagline">A room-type reader for NYC listings</p>
+  </header>
+
+  <main class="layout">
+
+    <section class="panel form-panel" aria-label="Listing details form">
+      <div class="panel-head">
+        <h1>Describe the listing</h1>
+        <p>Fill in the numbers from any NYC listing and we'll infer whether guests are getting an entire place, a private room, or a shared one.</p>
+        <button type="button" class="ghost-btn" id="fillExample">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+          Try an example
+        </button>
+      </div>
+
+      <form id="predictForm" novalidate>
+
+        <fieldset>
+          <legend>Where it is</legend>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="latitude">Latitude</label>
+              <input type="number" id="latitude" step="0.0001" min="-90" max="90" placeholder="40.7128" required>
+            </div>
+            <div class="field">
+              <label for="longitude">Longitude</label>
+              <input type="number" id="longitude" step="0.0001" min="-180" max="180" placeholder="-73.9560" required>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="neighbourhood_group">Borough</label>
+              <select id="neighbourhood_group" required>
+                <option value="" disabled selected>Choose a borough</option>
+                <option value="Manhattan">Manhattan</option>
+                <option value="Brooklyn">Brooklyn</option>
+                <option value="Queens">Queens</option>
+                <option value="Bronx">Bronx</option>
+                <option value="Staten Island">Staten Island</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="neighbourhood">Neighbourhood</label>
+              <input type="text" id="neighbourhood" list="neighbourhoodList" placeholder="Williamsburg" required>
+              <datalist id="neighbourhoodList"></datalist>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>What it costs</legend>
+
+          <div class="field slider-field">
+            <label for="price">Price per night <span class="unit">$<output id="price_out">150</output></span></label>
+            <input type="range" id="price" min="10" max="1000" step="1" value="150">
+          </div>
+
+          <div class="field slider-field">
+            <label for="minimum_nights">Minimum nights <output id="minimum_nights_out">2</output></label>
+            <input type="range" id="minimum_nights" min="1" max="365" step="1" value="2">
+          </div>
+
+          <div class="field slider-field">
+            <label for="availability_365">Days available a year <output id="availability_365_out">180</output></label>
+            <input type="range" id="availability_365" min="0" max="365" step="1" value="180">
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>How it's reviewed</legend>
+
+          <div class="field slider-field">
+            <label for="number_of_reviews">Total reviews <output id="number_of_reviews_out">25</output></label>
+            <input type="range" id="number_of_reviews" min="0" max="500" step="1" value="25">
+          </div>
+
+          <div class="field slider-field">
+            <label for="reviews_per_month">Reviews per month <output id="reviews_per_month_out">1.0</output></label>
+            <input type="range" id="reviews_per_month" min="0" max="20" step="0.1" value="1.0">
+          </div>
+
+          <div class="field slider-field">
+            <label for="calculated_host_listings_count">Listings by this host <output id="calculated_host_listings_count_out">1</output></label>
+            <input type="range" id="calculated_host_listings_count" min="0" max="100" step="1" value="1">
+          </div>
+        </fieldset>
+
+        <div class="error-banner" id="errorBanner" hidden></div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span class="btn-label">Predict room type</span>
+          <span class="btn-spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </section>
+
+    <section class="panel result-panel" aria-label="Prediction result">
+
+      <div class="hero-copy" id="heroCopy">
+        <p class="eyebrow">Powered by your trained model</p>
+        <h2>What kind of stay is this, really?</h2>
+        <p class="hero-sub">Every NYC listing tells on itself &mdash; the price, the reviews, the neighbourhood. Fill in the panel and we'll read the signal.</p>
+        <div class="legend">
+          <span class="legend-dot dot-a"></span> Entire place
+          <span class="legend-dot dot-b"></span> Private room
+          <span class="legend-dot dot-c"></span> Shared room
+        </div>
+      </div>
+
+      <div class="result-card" id="resultCard" hidden>
+        <p class="result-label">Most likely</p>
+        <h2 class="result-title" id="resultTitle">&mdash;</h2>
+        <p class="result-confidence" id="resultConfidence"></p>
+
+        <div class="bars" id="bars"></div>
+
+        <button type="button" class="ghost-btn" id="predictAgain">Predict another listing</button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <span id="apiStatus">Checking connection to the model API&hellip;</span>
+  </footer>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
